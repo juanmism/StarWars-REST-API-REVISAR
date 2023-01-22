@@ -8,7 +8,7 @@ from flask_swagger import swagger
 from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
-from models import db, User, Planet
+from models import db, User, Planet, Favorite, People
 #from models import Person
 
 app = Flask(__name__)
@@ -36,10 +36,13 @@ def handle_invalid_usage(error):
 def sitemap():
     return generate_sitemap(app)
 
-@app.route('/user', methods=['GET']) #PREGUNTAR TUTORÍA
+# USER
+@app.route('/user', methods=['GET']) 
 def user_list():
-    user = db.session.execute(db.select(User).order_by(User.id)).scalars()
-    return render_template("user/list.html", user=user)
+    all_users = User.query.all()
+    print(all_users)
+    usuarios = list( map ( lambda user: user.serialize(), all_users))
+    return jsonify(usuarios)
 
 @app.route('/user/<user_id>', methods=['GET'])
 def handle_user_ids(user_id):
@@ -57,12 +60,46 @@ def create_user():
     db.session.commit()
     return jsonify(new_user.serialize()), 200
 
+@app.route('/user/<user_id>', methods=['DELETE'])
+def delete_user_ids(user_id):
+    user = User.query.get(user_id)
+    db.session.delete(user)
+    db.session.commit()
+    return jsonify({ "delete user ": user }), 200
 
-@app.route('/planet', methods=['GET']) #PREGUNTAR TUTORÍA
-def planet_list():
-    planet = db.session.execute(db.select(Planet).order_by(planet.id)).scalars()
-    return render_template("planet/list.html", planet=planet)
+# PEOPLE
+@app.route('/people', methods=['GET']) 
+def people_list():
+    all_people = People.query.all()
+    print(all_people)
+    personas = list( map ( lambda people: people.serialize(), all_people))
+    return jsonify(personas)
 
+
+@app.route('/people/<people_id>', methods=['GET'])
+def handle_people_ids(people_id):
+    print(people_id)
+    people = People.query.get(people_id)
+    print(people)
+    return jsonify(people.serialize()), 200
+
+@app.route('/people/register', methods=['POST'])
+def create_people():
+    body = request.get_json()
+    new_people = People(name=body['name'], height=body['height'], hair=body['hair'], eyes=body['eyes'], birth=body['birth'], gender=body["gender"] )
+    print(new_people)
+    db.session.add(new_people)
+    db.session.commit()
+    return jsonify(new_people.serialize()), 200
+
+# PLANETS
+
+@app.route('/planet', methods=['GET']) 
+def user_planet():
+    all_planet = Planet.query.all()
+    print(all_planet)
+    planetas = list( map ( lambda planet: planet.serialize(), all_planet))
+    return jsonify(planetas)
 
 @app.route('/planet/<planet_id>', methods=['GET'])
 def handle_planet_ids(planet_id):
@@ -70,8 +107,6 @@ def handle_planet_ids(planet_id):
     planet = Planet.query.get(planet_id)
     print(planet)
     return jsonify(planet.serialize()), 200
-
-  
 
 @app.route('/planet/register', methods=['POST'])
 def create_planet():
@@ -81,6 +116,40 @@ def create_planet():
     db.session.add(new_planet)
     db.session.commit()
     return jsonify(new_planet.serialize()), 200
+
+@app.route('/planet/<planet_id>', methods= ['DELETE'])
+def delete_planet(planet_id):
+    planet = Planet.query.get(planet_id)
+    db.session.delete(planet)
+    db.session.commit()
+    return jsonify({ "delete planet ": planet })
+
+# FAVORITE
+@app.route('/favorite', methods=['GET']) 
+def favorite_list():
+    all_favorite = Favorite.query.all()
+    print(all_favorite)
+    favoritos = list( map ( lambda favorite: favorite.serialize(), all_favorite))
+    return jsonify(favoritos)
+
+@app.route('/favorite/<favorite_id>', methods=['GET'])
+def handle_favorite_ids(favorite_id):
+    print(favorite_id)
+    favorite = Favorite.query.get(favorite_id)
+    print(favorite)
+    return jsonify(favorite.serialize()), 200
+
+# ERROR CUANDO ENVIO DESDE POSTMAN - POST: raise TypeError(f"Object of type {type(o).__name__} 
+#   is not JSON serializable")
+#   TypeError: Object of type People is not JSON serializable
+@app.route('/favorite/register', methods=['POST'])
+def create_favorite():
+    body = request.get_json()
+    new_favorite = Favorite(favorite_user_id=body['favorite_user_id'], favorite_people_id=body['favorite_people_id'], favorite_planet_id=body['favorite_planet_id'])
+    print(new_favorite)
+    db.session.add(new_favorite)
+    db.session.commit()
+    return jsonify(new_favorite.serialize()), 200
 
 # this only runs if `$ python src/app.py` is executed
 if __name__ == '__main__':
